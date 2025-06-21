@@ -1,1 +1,98 @@
-Hello World
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script>
+// Redirect to HTML preview when opened via GitHub's file viewer
+if (location.hostname.includes('github.com') || location.hostname.includes('raw.githubusercontent.com')) {
+  const raw = location.hostname.includes('github.com')
+    ? location.href.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/')
+    : location.href;
+  location.href = 'https://htmlpreview.github.io/?' + raw;
+}
+</script>
+<title>Gynecologist ETA System</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+  th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+  th { background-color: #f0f0f0; }
+  input, button { padding: 6px 10px; margin-right: 5px; }
+</style>
+</head>
+<body>
+<h1>Gynecologist Waiting Line</h1>
+<div>
+  <strong>Current Time: </strong><span id="currentTime"></span>
+</div>
+<div style="margin-top:10px;">
+  <input id="patientName" type="text" placeholder="Patient Name">
+  <button onclick="addPatient()">Add Patient</button>
+  <button onclick="addEmergency()">Add Emergency Delay (30m)</button>
+  <button onclick="completePatient()">Complete Current Patient</button>
+</div>
+<table id="queueTable">
+  <thead>
+    <tr><th>#</th><th>Patient</th><th>ETA</th></tr>
+  </thead>
+  <tbody></tbody>
+</table>
+<script>
+const queue = [];
+const BASE_MINUTES = 15; // default appointment length
+let delayMinutes = 0; // accumulated emergency delays
+
+function updateTime() {
+  document.getElementById('currentTime').textContent =
+    new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+}
+
+function formatTime(date) {
+  return date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+
+function recalcETAs() {
+  let start = new Date(Date.now() + delayMinutes*60000);
+  for (const patient of queue) {
+    if (start < patient.added) start = new Date(patient.added);
+    patient.eta = new Date(start);
+    start = new Date(start.getTime() + BASE_MINUTES*60000);
+  }
+}
+
+function render() {
+  updateTime();
+  recalcETAs();
+  const tbody = document.querySelector('#queueTable tbody');
+  tbody.innerHTML = '';
+  queue.forEach((p, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${idx+1}</td><td>${p.name}</td><td>${formatTime(p.eta)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function addPatient() {
+  const input = document.getElementById('patientName');
+  const name = input.value.trim();
+  if (!name) return;
+  queue.push({name, added: new Date()});
+  input.value = '';
+  render();
+}
+
+function addEmergency() {
+  delayMinutes += 30;
+  render();
+}
+
+function completePatient() {
+  if (queue.length > 0) queue.shift();
+  render();
+}
+
+setInterval(render, 60000); // refresh each minute
+render();
+</script>
+</body>
+</html>
